@@ -8,7 +8,6 @@
                 display: flex;
                 flex-direction: column;
                 background: white;
-                touch-action: none;
             }
             canvas {
                 display: block;
@@ -17,6 +16,7 @@
                 width: calc(100vw - 70px);
                 height: calc(100vh - 260px);
                 margin: 0 auto;
+                touch-action: none;
             }
             #undoButton {
                 width: 100px;
@@ -335,6 +335,11 @@
             });
             
             document.getElementById("reverse").addEventListener("change", () => switchMoveDirection = !switchMoveDirection);
+            
+            window.addEventListener('beforeunload', function (e) {
+                e.preventDefault();
+                e.returnValue = '';
+            });
             
             //
             moveByKey();
