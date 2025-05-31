@@ -84,7 +84,7 @@
         </style>
     </head>
     <body>
-        2025-05-31-16:14
+        2025-05-31-11:15
         <br><br>
         <div>
             <button id="undoButton"><b>Undo</b></button>
@@ -318,6 +318,7 @@
             });
             canvas.addEventListener("touchstart", (event) =>{
                 drawing = true;
+                updateMouseXY(event);
                 draw(event);
             }, {passive: false});
             canvas.addEventListener("mouseup", () => {
@@ -343,7 +344,10 @@
                 updateMouseXY(e);
                 draw(e);
             });
-            canvas.addEventListener("touchmove", draw, {passive: false});
+            canvas.addEventListener("touchmove", (e) => {
+                updateMouseXY(e);
+                draw(e);
+            }, {passive: false});
             
             document.getElementById("undoButton").addEventListener("click", undo);
             
