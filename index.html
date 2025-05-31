@@ -8,9 +8,10 @@
                 display: flex;
                 flex-direction: column;
                 background: white;
+            }
+            button {
                 touch-action: manipulation;
             }
-            
             canvas {
                 display: block;
                 border: 5px solid black;
@@ -30,13 +31,19 @@
                 margin-left: 5px;
                 margin-bottom: 10px;
             }
-            #zoomUpButton {
+            #clearButton {
                 width: 100px;
                 height: 50px;
                 margin-left: 20px;
                 margin-bottom: 10px;
             }
-            #zoomDownButton {
+            #zoomInButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 20px;
+                margin-bottom: 10px;
+            }
+            #zoomOutButton {
                 width: 100px;
                 height: 50px;
                 margin-left: 5px;
@@ -66,6 +73,14 @@
                 margin-left: 5px;
                 margin-bottom: 10px;
             }
+            #subCursor {
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                border-radius: 50%;
+                background-color: rgba(0, 0, 0, 0.215);
+                pointer-events: none;
+            }
         </style>
     </head>
     <body>
@@ -74,25 +89,30 @@
         <div>
             <button id="undoButton"><b>Undo</b></button>
             <button id="redoButton"><b>Redo</b></button>
-            <button id="zoomUpButton"><b>ZoomUp</b></button>
-            <button id="zoomDownButton"><b>ZoomDown</b></button>
-            <input type="checkbox" id="reverse" name="reverse"><label for="reverse">移動逆向き</label>
+            <button id="clearButton"><b>Clear</b></button>
+            <button id="zoomInButton"><b>ZoomIn</b></button>
+            <button id="zoomOutButton"><b>ZoomOut</b></button>
             <button id="moveUpButton"><b>⇧</b></button>
             <button id="moveDownButton"><b>⇩</b></button>
             <button id="moveLeftButton"><b>⇦</b></button>
             <button id="moveRightButton"><b>⇨</b></button>
+            <input type="checkbox" id="reverse" name="reverse"><label for="reverse">移動逆向き</label>
         </div>
         <br>
+        <div id="subCursor"></div>
         <canvas id="canvas0"></canvas>
         <script>
             //定義
             const canvas = document.getElementById("canvas0");
             const ctx = canvas.getContext('2d');
+            const subCursor = document.getElementById("subCursor");
             
             let currentPath = [];
             let allPaths = [];
             let removedPaths = [];
             let pressedKey = {};
+            let color = '#000000';
+            let size = 4;
             let switchMoveDirection = false;
             
             const style = getComputedStyle(canvas);
@@ -104,21 +124,23 @@
             
             let drawing = false;
             let isOut = false;
+            let mouseX = 0, mouseY = 0;
             
             //関数
+            function updateMouseXY(event) {
+                if(event.touches) {
+                    mouseX = event.touches[0].clientX;
+                    mouseY = event.touches[0].clientY;
+                } else {
+                    mouseX = event.clientX;
+                    mouseY = event.clientY;
+                }
+            }
+            
             function getXY(event) {
                 const rect = canvas.getBoundingClientRect();
-                let x, y;
-                if(event.touches) {
-                    x = event.touches[0].clientX - rect.left;
-                    y = event.touches[0].clientY - rect.top;
-                } else {
-                    x = event.clientX - rect.left;
-                    y = event.clientY - rect.top;
-                }
-                //border
-                x -= 5;
-                y -= 5;
+                let x = mouseX - rect.left - 5;
+                let y = mouseY - rect.top - 5;
                 return {x, y};
             }
             
@@ -127,8 +149,8 @@
                 
                 const {x, y} = getXY(event);
                 
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = size;
+                ctx.strokeStyle = color;
                 ctx.lineCap = 'round';
                 
                 ctx.lineTo(x, y);
@@ -187,25 +209,27 @@
                 reDraw(allPaths);
             }
             
-            function zoomUp(event) {
+            function zoomIn(scale) {
                 if(drawing) {
                     alert("now drawing");
                     return;
                 }
+                
+                scale = 1.0 + scale*0.2;
                 
                 const centerX = canvas.width / 2.0;
                 const centerY = canvas.height / 2.0;
                 
                 for(path of allPaths) {
                     for(let i = 0; i < path.length; i++) {
-                        path[i].x = (path[i].x - centerX) * 1.2 + centerX;
-                        path[i].y = (path[i].y - centerY) * 1.2 + centerY;
+                        path[i].x = (path[i].x - centerX) * scale + centerX;
+                        path[i].y = (path[i].y - centerY) * scale + centerY;
                     }
                 }
                 for(path of removedPaths) {
                     for(let i = 0; i < path.length; i++) {
-                        path[i].x = (path[i].x - centerX) * 1.2 + centerX;
-                        path[i].y = (path[i].y - centerY) * 1.2 + centerY;
+                        path[i].x = (path[i].x - centerX) * scale + centerX;
+                        path[i].y = (path[i].y - centerY) * scale + centerY;
                     }
                 }
                 
@@ -213,25 +237,27 @@
                 reDraw(allPaths);
             }
             
-            function zoomDown(event) {
+            function zoomOut(scale) {
                 if(drawing) {
                     alert("now drawing");
                     return;
                 }
+                
+                scale = 1.0 + scale*0.2;
                 
                 const centerX = canvas.width / 2.0;
                 const centerY = canvas.height / 2.0;
                 
                 for(path of allPaths) {
                     for(let i = 0; i < path.length; i++) {
-                        path[i].x = (path[i].x - centerX) * 0.8 + centerX;
-                        path[i].y = (path[i].y - centerY) * 0.8 + centerY;
+                        path[i].x = (path[i].x - centerX) / scale + centerX;
+                        path[i].y = (path[i].y - centerY) / scale + centerY;
                     }
                 }
                 for(path of removedPaths) {
                     for(let i = 0; i < path.length; i++) {
-                        path[i].x = (path[i].x - centerX) * 0.8 + centerX;
-                        path[i].y = (path[i].y - centerY) * 0.8 + centerY;
+                        path[i].x = (path[i].x - centerX) / scale + centerX;
+                        path[i].y = (path[i].y - centerY) / scale + centerY;
                     }
                 }
                 
@@ -266,14 +292,24 @@
                 reDraw(allPaths);
             }
             
-            function moveByKey() {
+            function operateByKey() {
                 if(pressedKey['ArrowUp'] == true || pressedKey['w'] == true) move(0, -5);
                 if(pressedKey['ArrowDown'] == true || pressedKey['s'] == true) move(0, 5);
                 if(pressedKey['ArrowLeft'] == true || pressedKey['a'] == true) move(-5, 0);
                 if(pressedKey['ArrowRight'] == true || pressedKey['d'] == true) move(5, 0);
+                if(pressedKey['i'] == true) zoomIn(0.1);
+                if(pressedKey['o'] == true) zoomOut(0.1);
                 
-                requestAnimationFrame(moveByKey);
-            }
+                requestAnimationFrame(operateByKey);
+            } operateByKey();
+            
+            function moveSubCursor() {
+                subCursor.style.transform = `translate(${mouseX-8 - size/2}px, ${mouseY-8 - size/2}px)`;
+                subCursor.style.height = size + "px";
+                subCursor.style.width = size + "px";
+                
+                requestAnimationFrame(moveSubCursor);
+            } moveSubCursor();
             
             //実行
             canvas.addEventListener("mousedown", (event) =>{
@@ -303,24 +339,34 @@
                 }
             }, {passive: false});
             canvas.addEventListener("mouseout", () => drawing = false);
-            canvas.addEventListener("mousemove", draw);
+            canvas.addEventListener("mousemove", (e) => {
+                updateMouseXY(e);
+                draw(e);
+            });
             canvas.addEventListener("touchmove", draw, {passive: false});
             
             document.getElementById("undoButton").addEventListener("click", undo);
             
             document.getElementById("redoButton").addEventListener("click", redo);
             
-            document.getElementById("zoomUpButton").addEventListener("click", zoomUp);
+            document.getElementById("clearButton").addEventListener("click", () => {
+                if(!window.confirm("この操作は取り消せません。本当に全てを削除しますか？")) return;
+                allPaths = [];
+                removedPaths = [];
+                clear();
+            });
             
-            document.getElementById("zoomDownButton").addEventListener("click", zoomDown);
+            document.getElementById("zoomInButton").addEventListener("click", () => zoomIn(1.5));
             
-            document.getElementById("moveUpButton").addEventListener("click", () => move(0, -15));
+            document.getElementById("zoomOutButton").addEventListener("click", () => zoomOut(1.5));
             
-            document.getElementById("moveDownButton").addEventListener("click", () => move(0, 15));
+            document.getElementById("moveUpButton").addEventListener("click", () => move(0, -50));
             
-            document.getElementById("moveLeftButton").addEventListener("click", () => move(-15, 0));
+            document.getElementById("moveDownButton").addEventListener("click", () => move(0, 50));
             
-            document.getElementById("moveRightButton").addEventListener("click", () => move(15, 0));
+            document.getElementById("moveLeftButton").addEventListener("click", () => move(-50, 0));
+            
+            document.getElementById("moveRightButton").addEventListener("click", () => move(50, 0));
             
             document.addEventListener('keydown', (event) => {
                 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -332,6 +378,14 @@
             
             document.addEventListener('keydown', (event) => {
                 pressedKey[event.key] = true;
+                if(event.key == 'c') {
+                    if(color == '#000000') color = '#ffffff';
+                    else color = '#000000';
+                }
+                if(event.key == 'b') {
+                    size *= 2;
+                    if(size >= 32) size = 2;
+                }
             });
             
             document.addEventListener('keyup', (event) => {
@@ -345,8 +399,6 @@
                 e.returnValue = '';
             });
             
-            //
-            moveByKey();
         </script>
     </body>
 </html>
