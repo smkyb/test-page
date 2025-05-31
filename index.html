@@ -13,8 +13,6 @@
                 display: block;
                 border: 5px solid black;
                 background: #ffffff;
-                width: calc(100vw - 70px - 300px);
-                height: calc(100vh - 260px - 300px);
                 margin: 0 auto;
                 touch-action: none;
             }
@@ -95,6 +93,9 @@
             let switchMoveDirection = false;
             
             const style = getComputedStyle(canvas);
+            
+            canvas.style.width = window.innerWidth * 0.75 + "px";
+            canvas.style.height = (window.innerHeight - parseFloat(200 + "px")) * 0.9 + "px";
             canvas.width = parseFloat(style.width);
             canvas.height = parseFloat(style.height);
             
