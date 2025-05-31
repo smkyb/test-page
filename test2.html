@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>b</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                background: white;
+            }
+            canvas {
+                display: block;
+                border: 5px solid rgb(103, 103, 103);
+                background: #ffffff;
+                width: calc(100vw - 40px);
+                height: 400px;
+                margin: 0 auto;
+                touch-action: none;
+            }
+            #undoButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 20px;
+            }
+            #redoButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 align="center">これ</h1>
+        <div>
+            <button id="undoButton">
+                <b>Undo</b>
+            </button>
+            <button id="redoButton">
+                <b>Redo</b>
+            </button>
+        </div>
+        <br>
+        <canvas id="canvas0"></canvas>
+        <script>
+            const canvas = document.getElementById("canvas0");
+            const ctx = canvas.getContext('2d');
+            
+            let currentPath = [];
+            let allPaths = [];
+            let removedPaths = [];
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            let drawing = false;
+            
+            canvas.addEventListener("mousedown", (event) =>{
+                drawing = true;
+                draw(event);
+            });
+            canvas.addEventListener("touchstart", (event) =>{
+                drawing = true;
+                draw(event);
+            }, {passive: false});
+            canvas.addEventListener("mouseup", () => {
+                drawing = false;
+                ctx.beginPath();
+                if(currentPath.length != 0) {
+                    allPaths.push(currentPath);
+                    currentPath = [];
+                    removedPaths = [];
+                }
+            });
+            canvas.addEventListener("touchend", () => {
+                drawing = false;
+                ctx.beginPath();
+                if(currentPath.length != 0) {
+                    allPaths.push(currentPath);
+                    currentPath = [];
+                    removedPaths = [];
+                }
+            }, {passive: false});
+            canvas.addEventListener("mousemove", draw);
+            canvas.addEventListener("touchmove", draw, {passive: false});
+            
+            function getXY(event) {
+                const rect = canvas.getBoundingClientRect();
+                let x, y;
+                if(event.touches) {
+                    x = event.touches[0].clientX - rect.left;
+                    y = event.touches[0].clientY - rect.top;
+                } else {
+                    x = event.clientX - rect.left;
+                    y = event.clientY - rect.top;
+                }
+                return {x, y};
+            }
+            
+            function draw(event) {
+                if(!drawing) return;
+                
+                event.preventDefault();
+                
+                const {x, y} = getXY(event);
+                
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#000000';
+                ctx.lineCap = 'round';
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                currentPath.push({x, y, color:ctx.strokeStyle, width:ctx.lineWidth});
+            }
+            
+            document.getElementById("undoButton").addEventListener("click", undo);
+            
+            function undo() {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                if(allPaths.length == 0) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                removedPaths.push(allPaths.pop());
+                for(const path of allPaths){
+                    
+                    ctx.strokeStyle = path[0].color;
+                    ctx.lineWidth = path[0].width;
+                    ctx.lineCap = 'round';
+                    
+                    for(let i = 0; i < path.length; i++) {
+                        ctx.lineTo(path[i].x, path[i].y)
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(path[i].x, path[i].y);
+                    }
+                    ctx.beginPath();
+                }
+            }
+            
+            document.getElementById("redoButton").addEventListener("click", redo);
+            
+            function redo() {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                if(removedPaths.length == 0) return;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                allPaths.push(removedPaths.pop());
+                for(const path of allPaths){
+                    
+                    ctx.strokeStyle = path[0].color;
+                    ctx.lineWidth = path[0].width;
+                    
+                    for(let i = 0; i < path.length; i++) {
+                        ctx.lineTo(path[i].x, path[i].y)
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(path[i].x, path[i].y);
+                    }
+                    ctx.beginPath();
+                }
+            }
+        </script>
+    </body>
+</html>
