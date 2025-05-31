@@ -2,59 +2,276 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>b</title>
+        <title>test</title>
         <style>
             body {
                 display: flex;
                 flex-direction: column;
                 background: white;
+                touch-action: manipulation;
             }
             canvas {
                 display: block;
-                border: 5px solid rgb(103, 103, 103);
+                border: 5px solid black;
                 background: #ffffff;
-                width: calc(100vw - 40px);
-                height: 400px;
+                width: calc(100vw - 70px);
+                height: calc(100vh - 260px);
                 margin: 0 auto;
-                touch-action: none;
             }
             #undoButton {
                 width: 100px;
                 height: 50px;
                 margin-left: 20px;
+                margin-bottom: 10px;
             }
             #redoButton {
                 width: 100px;
                 height: 50px;
+                margin-left: 5px;
+                margin-bottom: 10px;
+            }
+            #zoomUpButton {
+                width: 100px;
+                height: 50px;
                 margin-left: 20px;
+                margin-bottom: 10px;
+            }
+            #zoomDownButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 5px;
+                margin-bottom: 10px;
+            }
+            #moveUpButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 20px;
+                margin-bottom: 10px;
+            }
+            #moveDownButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 5px;
+                margin-bottom: 10px;
+            }
+            #moveLeftButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 5px;
+                margin-bottom: 10px;
+            }
+            #moveRightButton {
+                width: 100px;
+                height: 50px;
+                margin-left: 5px;
+                margin-bottom: 10px;
             }
         </style>
     </head>
     <body>
-        <h1 align="center">これ</h1>
+        <br><br>
         <div>
-            <button id="undoButton">
-                <b>Undo</b>
-            </button>
-            <button id="redoButton">
-                <b>Redo</b>
-            </button>
+            <button id="undoButton"><b>Undo</b></button>
+            <button id="redoButton"><b>Redo</b></button>
+            <button id="zoomUpButton"><b>ZoomUp</b></button>
+            <button id="zoomDownButton"><b>ZoomDown</b></button>
+            <input type="checkbox" id="reverse" name="reverse"><label for="reverse">移動逆向き</label>
+            <button id="moveUpButton"><b>⇧</b></button>
+            <button id="moveDownButton"><b>⇩</b></button>
+            <button id="moveLeftButton"><b>⇦</b></button>
+            <button id="moveRightButton"><b>⇨</b></button>
         </div>
         <br>
         <canvas id="canvas0"></canvas>
         <script>
+            //定義
             const canvas = document.getElementById("canvas0");
             const ctx = canvas.getContext('2d');
             
             let currentPath = [];
             let allPaths = [];
             let removedPaths = [];
+            let pressedKey = {};
+            let switchMoveDirection = false;
             
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+            const style = getComputedStyle(canvas);
+            canvas.width = parseFloat(style.width);
+            canvas.height = parseFloat(style.height);
             
             let drawing = false;
+            let isOut = false;
             
+            //関数
+            function getXY(event) {
+                const rect = canvas.getBoundingClientRect();
+                let x, y;
+                if(event.touches) {
+                    x = event.touches[0].clientX - rect.left;
+                    y = event.touches[0].clientY - rect.top;
+                } else {
+                    x = event.clientX - rect.left;
+                    y = event.clientY - rect.top;
+                }
+                //border
+                x -= 5;
+                y -= 5;
+                return {x, y};
+            }
+            
+            function draw(event) {
+                if(!drawing) return;
+                
+                const {x, y} = getXY(event);
+                
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#000000';
+                ctx.lineCap = 'round';
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                currentPath.push({x, y, color:ctx.strokeStyle, width:ctx.lineWidth});
+            }
+            
+            function reDraw(paths) {
+                for(const path of paths) {
+                    ctx.strokeStyle = path[0].color;
+                    ctx.lineWidth = path[0].width;
+                    ctx.lineCap = 'round';
+                    
+                    for(let i = 0; i < path.length; i++) {
+                        ctx.lineTo(path[i].x, path[i].y)
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(path[i].x, path[i].y);
+                    }
+                    ctx.beginPath();
+                }
+            }
+            
+            function clear() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            function undo() {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                if(allPaths.length == 0) return;
+                
+                removedPaths.push(allPaths.pop());
+                
+                clear();
+                reDraw(allPaths);
+            }
+            
+            function redo() {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                if(removedPaths.length == 0) return;
+                
+                allPaths.push(removedPaths.pop());
+                
+                clear();
+                reDraw(allPaths);
+            }
+            
+            function zoomUp(event) {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                const centerX = canvas.width / 2.0;
+                const centerY = canvas.height / 2.0;
+                
+                for(path of allPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x = (path[i].x - centerX) * 1.2 + centerX;
+                        path[i].y = (path[i].y - centerY) * 1.2 + centerY;
+                    }
+                }
+                for(path of removedPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x = (path[i].x - centerX) * 1.2 + centerX;
+                        path[i].y = (path[i].y - centerY) * 1.2 + centerY;
+                    }
+                }
+                
+                clear();
+                reDraw(allPaths);
+            }
+            
+            function zoomDown(event) {
+                if(drawing) {
+                    alert("now drawing");
+                    return;
+                }
+                
+                const centerX = canvas.width / 2.0;
+                const centerY = canvas.height / 2.0;
+                
+                for(path of allPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x = (path[i].x - centerX) * 0.8 + centerX;
+                        path[i].y = (path[i].y - centerY) * 0.8 + centerY;
+                    }
+                }
+                for(path of removedPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x = (path[i].x - centerX) * 0.8 + centerX;
+                        path[i].y = (path[i].y - centerY) * 0.8 + centerY;
+                    }
+                }
+                
+                clear();
+                reDraw(allPaths);
+            }
+            
+            function move(movex, movey) {
+                if(drawing) {
+                    return;
+                }
+                
+                if(switchMoveDirection) {
+                    movex *= -1;
+                    movey *= -1;
+                }
+                
+                for(path of allPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x += movex;
+                        path[i].y += movey;
+                    }
+                }
+                for(path of removedPaths) {
+                    for(let i = 0; i < path.length; i++) {
+                        path[i].x += movex;
+                        path[i].y += movey;
+                    }
+                }
+                
+                clear();
+                reDraw(allPaths);
+            }
+            
+            function moveByKey() {
+                if(pressedKey['ArrowUp'] == true || pressedKey['w'] == true) move(0, -5);
+                if(pressedKey['ArrowDown'] == true || pressedKey['s'] == true) move(0, 5);
+                if(pressedKey['ArrowLeft'] == true || pressedKey['a'] == true) move(-5, 0);
+                if(pressedKey['ArrowRight'] == true || pressedKey['d'] == true) move(5, 0);
+                
+                requestAnimationFrame(moveByKey);
+            }
+            
+            //実行
             canvas.addEventListener("mousedown", (event) =>{
                 drawing = true;
                 draw(event);
@@ -81,97 +298,46 @@
                     removedPaths = [];
                 }
             }, {passive: false});
+            canvas.addEventListener("mouseout", () => drawing = false);
             canvas.addEventListener("mousemove", draw);
             canvas.addEventListener("touchmove", draw, {passive: false});
             
-            function getXY(event) {
-                const rect = canvas.getBoundingClientRect();
-                let x, y;
-                if(event.touches) {
-                    x = event.touches[0].clientX - rect.left;
-                    y = event.touches[0].clientY - rect.top;
-                } else {
-                    x = event.clientX - rect.left;
-                    y = event.clientY - rect.top;
-                }
-                return {x, y};
-            }
-            
-            function draw(event) {
-                if(!drawing) return;
-                
-                event.preventDefault();
-                
-                const {x, y} = getXY(event);
-                
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = '#000000';
-                ctx.lineCap = 'round';
-                
-                ctx.lineTo(x, y);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                
-                currentPath.push({x, y, color:ctx.strokeStyle, width:ctx.lineWidth});
-            }
-            
             document.getElementById("undoButton").addEventListener("click", undo);
-            
-            function undo() {
-                if(drawing) {
-                    alert("now drawing");
-                    return;
-                }
-                
-                if(allPaths.length == 0) return;
-                
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                removedPaths.push(allPaths.pop());
-                for(const path of allPaths){
-                    
-                    ctx.strokeStyle = path[0].color;
-                    ctx.lineWidth = path[0].width;
-                    ctx.lineCap = 'round';
-                    
-                    for(let i = 0; i < path.length; i++) {
-                        ctx.lineTo(path[i].x, path[i].y)
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.moveTo(path[i].x, path[i].y);
-                    }
-                    ctx.beginPath();
-                }
-            }
             
             document.getElementById("redoButton").addEventListener("click", redo);
             
-            function redo() {
-                if(drawing) {
-                    alert("now drawing");
-                    return;
-                }
+            document.getElementById("zoomUpButton").addEventListener("click", zoomUp);
+            
+            document.getElementById("zoomDownButton").addEventListener("click", zoomDown);
+            
+            document.getElementById("moveUpButton").addEventListener("click", () => move(0, -15));
+            
+            document.getElementById("moveDownButton").addEventListener("click", () => move(0, 15));
+            
+            document.getElementById("moveLeftButton").addEventListener("click", () => move(-15, 0));
+            
+            document.getElementById("moveRightButton").addEventListener("click", () => move(15, 0));
+            
+            document.addEventListener('keydown', (event) => {
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const ctrlKey = isMac ? event.metaKey : event.ctrlKey;
                 
-                if(removedPaths.length == 0) return;
-                
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                allPaths.push(removedPaths.pop());
-                for(const path of allPaths){
-                    
-                    ctx.strokeStyle = path[0].color;
-                    ctx.lineWidth = path[0].width;
-                    
-                    for(let i = 0; i < path.length; i++) {
-                        ctx.lineTo(path[i].x, path[i].y)
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.moveTo(path[i].x, path[i].y);
-                    }
-                    ctx.beginPath();
-                }
-            }
+                if (ctrlKey && event.key == 'z') undo();
+                if (ctrlKey && event.key == 'y') redo();
+            });
+            
+            document.addEventListener('keydown', (event) => {
+                pressedKey[event.key] = true;
+            });
+            
+            document.addEventListener('keyup', (event) => {
+                pressedKey[event.key] = false;
+            });
+            
+            document.getElementById("reverse").addEventListener("change", () => switchMoveDirection = !switchMoveDirection);
+            
+            //
+            moveByKey();
         </script>
     </body>
 </html>
